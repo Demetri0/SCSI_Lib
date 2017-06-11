@@ -3,12 +3,13 @@
 
 #include <fcntl.h>
 #include <initializer_list>
+#include <cstring>
 
 class SGDevice
 {
 public:
     typedef struct SGLocation {
-        int lba = 0;
+        unsigned char lba = 0;
         SGLocation(int lba){
             this->lba = lba;
         }
@@ -33,6 +34,26 @@ public:
         WriteOnly = O_WRONLY,
         ReadWrite = O_RDWR
     } IOMode;
+    typedef struct SGDeviceInfo {
+        char vendor[8]   = {0};
+        char product[16] = {0};
+        char version[4]  = {0};
+        int  lbaCount    = 0;
+        char data[255]   = {0};
+        /*
+        SGDeviceInfo& operator=(const SGDeviceInfo& other){
+            strcpy(this->vendor,  other.vendor);
+            strcpy(this->product, other.product);
+            strcpy(this->version, other.version);
+            this->lbaCount = other.lbaCount;
+            return *this;
+        }
+        //*/
+    } SGDeviceInfo;
+    typedef struct SGError {
+        char sense[255] = {0};
+        int  status     =  0;
+    } SGError;
 
 public:
     SGDevice(const char *devPath, IOMode mode = IOMode::ReadWrite);
@@ -41,15 +62,42 @@ public:
     bool read(SGLocation pos, SGData data);
     bool write(SGLocation pos, SGData data);
 
+    SGDeviceInfo deviceInfo() const;
+    SGError lastError() const;
 
     bool isReady() const;
 
+    bool open();
+    bool close();
+
 private:
+    struct SGCommand {
+        enum Type {
+            None,
+            Read,
+            Write,
+            Inquiry
+        };
+        SGCommand(Type t):_type(t){}
+      private:
+        Type _type = Type::None;
+    };
+
+private:
+//    static const int SENSE_LEN = 255;
     int _fd = 0;
     bool _isReady = false;
+    const char* _deviceName = nullptr;
+    IOMode _mode;
+    SGDeviceInfo _info;
+    SGError _lastError;
 
 private:
     void setReady(bool isReady = true);
+    int fd() const;
+    void readInquiry();
+    void readCapacity();
+    void setLastError(struct sg_io_hdr* io_hdr);
 };
 
 #endif // SGDEVICE_H

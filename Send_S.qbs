@@ -6,8 +6,9 @@ CppApplication {
     consoleApplication: true
 
     files: [
-        "*.h",
-        "*.cpp"
+        "main.cpp",
+        "sgdevice.h",
+        "sgdevice.cpp"
     ]
 
     Group {     // Properties for the produced executable
