@@ -19,35 +19,38 @@
 
 #include "sgdevice.h"
 
+void printData(SGDevice::SGData data){
+    std::cout << "SGData("<< data.size <<") {" << std::endl;
+    for (size_t i = 0; i < data.size; ++i) {
+        printf(" %hx", data.data[i]);
+        if( i % 16 == 0 ){
+            std::cout << std::endl;
+        }
+    }
+    std::cout << std::endl << "}" << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
+    //52-76-64
     SGDevice sdb("/dev/sdb", SGDevice::ReadWrite);
-    SGDevice::SGData data(new unsigned char[512], 512);
-    if( sdb.read({2}, data) ){
-        std::cout << "Read success. Readed data:" << std::endl;
-        for (size_t i = 0; i < data.size; ++i) {
-            printf("%hx ", data.data[i]);
-        }
-        std::cout << std::endl << "End readed data" << std::endl;
+    SGDevice::SGData rdata(new unsigned char[512], 512);
+    SGDevice::SGData wdata(new unsigned char[512], 512);
+    for (int i = 0; i < wdata.size; ++i) {
+        wdata.data[i] = i;
     }
-    /*
-    char * path = "/dev/sdb";
-    int code = 0; //действие
-    unsigned char *data;// = new unsigned char[255];//данные
-    int sock, listener;
-    struct sockaddr_in addr;
-    char buf[1024] = {5};
-    int bytes_read;
+    SGDevice::SGLocation loc(2);
+    if( sdb.read(loc, rdata) ){
+        printData(rdata);
+    }
+    if( sdb.write(loc, wdata) ){
+        std::cout << "Writed success." << std::endl;
+    }
+    if( sdb.read(loc, rdata) ){
+        printData(rdata);
+    }
 
-    Disk tersa;
-//    tersa.test_execute_ter(path, 0, 0, Disk::TestReady, data);//READ
-//    tersa.test_execute_ter(path, 0, 0, Disk::Inquiry, data);//READ
-//    tersa.test_execute_ter(path, 0, 0, Disk::ReadCapasity, data);//READ
-//    tersa.test_execute_ter(path, 0, 0, Disk::Read, data);//READ
-    tersa.test_execute_ter(path, 0, 0, Disk::Write, data);
-    // */
     std::cout << "Enter num to exit: ";
     int x; std::cin >> x;
     return 0;
-
 }
