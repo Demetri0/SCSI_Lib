@@ -78,9 +78,18 @@ private:
         enum Type {
             None      = -1,
             TestReady = 0x00,
+            Read      = 0x28, // READ (10)
             Read6     = 0x08,
+            Read10    = 0x28,
+            Read12    = 0xA8,
             Read16    = 0x88,
-            Write     = 0x8A,
+            Read32    = 0x7F,
+            Write     = 0x2A, // WRITE (10)
+            Write6    = 0x0A,
+            Write10   = 0x2A,
+            Write12   = 0xAA,
+            Write16   = 0x8A,
+            Write32   = 0x7F,
             Inquiry   = 0x12,
             Capacity  = 0x25
         };

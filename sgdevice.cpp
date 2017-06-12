@@ -40,11 +40,11 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
     /*char lba_bytes[sizeof(int)];
     *reinterpret_cast<int*>(lba_bytes) = pos.lba;*/
 
-    /*unsigned char read6cmd[6] =
+    /*unsigned char cmd[6] =
     {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
-    unsigned char read10cmd[10] =
-    {0x28,reserved, 0,0,0,pos.lba, reserved, 0,transfer_length, control_byte};
-    /*unsigned char read16cmd[16] =
+    unsigned char cmd[10] =
+    {SGCommand::Read10,reserved, 0,0,0,pos.lba, reserved, 0,transfer_length, control_byte};
+    /*unsigned char cmd[16] =
     {SGCommand::Read,0,0,0,0,0,0,0,0, pos.lba,0,0,1,0,0};*/
 
     sg_io_hdr_t io_hdr;
@@ -52,8 +52,8 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
     memset(&io_hdr, 0, sizeof(sg_io_hdr_t));
     io_hdr.interface_id = 'S';
 
-    io_hdr.cmd_len = sizeof(read10cmd);
-    io_hdr.cmdp = read10cmd;
+    io_hdr.cmd_len = sizeof(cmd);
+    io_hdr.cmdp = cmd;
 
     io_hdr.mx_sb_len = sizeof(_lastError.sense);
     io_hdr.sbp = _lastError.sense;
@@ -80,10 +80,10 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
     }
 
     // Prepare CMD
-    /*unsigned char w16CmdBlk[16] =
-    {SGCommand::Write,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};*/
+    /*unsigned char cmd[16] =
+    {SGCommand::Write16,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};*/
     unsigned char cmd[10] =
-    {0x2A, 0, 0,0,0,pos.lba, 0, 0,1, 0};
+    {SGCommand::Write10, 0, 0,0,0,pos.lba, 0, 0,1, 0};
 
     // Prepare data buffer
     // unsigned char buffer[WRITE16_LEN];

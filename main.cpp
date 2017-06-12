@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 
 
     SGDevice::SGData data(new unsigned char[512], 512);
-    SGDevice::SGLocation loc(4);
+    SGDevice::SGLocation loc(8);
 
     //*
     // Читаем что есть
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
         printError( sdb.lastError() );
     }
     //*/
-    //*
+    /*
     setTestData(data);
     if( sdb.write(loc, data) ){
         std::cout << "Writed success." << std::endl;
