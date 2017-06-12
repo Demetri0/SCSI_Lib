@@ -5,6 +5,8 @@
 #include <initializer_list>
 #include <cstring>
 
+#include <iostream>
+
 class SGDevice
 {
 public:
@@ -17,7 +19,9 @@ public:
         }
         SGLocation(std::initializer_list<int> il){
             this->lba = *(il.begin());
-            this->readBlocksCount = *(il.begin()+1);
+            if( il.size() > 1 ){
+                this->readBlocksCount = *(il.begin()+1);
+            }
         }
     } SGLocation;
     typedef struct SGData {
@@ -86,13 +90,13 @@ private:
             Read10    = 0x28,
             Read12    = 0xA8,
             Read16    = 0x88,
-            Read32    = 0x7F,
+            Read32    = 0x7F, /// \warning
             Write     = 0x2A, // WRITE (10)
             Write6    = 0x0A,
             Write10   = 0x2A,
             Write12   = 0xAA,
             Write16   = 0x8A,
-            Write32   = 0x7F,
+            Write32   = 0x7F, /// \warning
             Inquiry   = 0x12,
             Capacity  = 0x25
         };
@@ -106,7 +110,6 @@ private:
     };
 
 private:
-//    static const int SENSE_LEN = 255;
     int _fd = 0;
     bool _isReady = false;
     const char* _deviceName = nullptr;
@@ -122,6 +125,8 @@ private:
     void readCapacity();
     void setLastError(struct sg_io_hdr* io_hdr);
     void initIoHdr(struct sg_io_hdr* io_hdr);
+
+    // struct sg_io_hdr* getWriiteIoHdr(); /// \todo
 };
 
 #endif // SGDEVICE_H

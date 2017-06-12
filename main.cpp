@@ -78,8 +78,8 @@ int main(int argc, char* argv[])
     printInquiry( sdb.deviceInfo() );
 
 
-    SGDevice::SGData data(new unsigned char[512], 512);
-    SGDevice::SGLocation loc(4);
+    SGDevice::SGData data(new unsigned char[1024], 1024);
+    SGDevice::SGLocation loc = {4,2};
 
     //*
     // Читаем что есть

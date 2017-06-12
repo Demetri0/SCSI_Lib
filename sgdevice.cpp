@@ -44,6 +44,7 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
     /*unsigned char cmd[6] =
     {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
 
+    printf("X: %.2x %.2x\n", transferLength.b[1], transferLength.b[0]);
     unsigned char cmd[10] = {
         SGCommand::Read10,
         reserved,
@@ -96,20 +97,14 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
 
     // Prepare sg_io_hdr
     sg_io_hdr_t io_hdr;
-    memset(&io_hdr,0,sizeof(sg_io_hdr_t));
-    io_hdr.interface_id = 'S';
+    this->initIoHdr( & io_hdr );
 
     io_hdr.cmd_len = sizeof(cmd);
     io_hdr.cmdp = cmd;
 
-    io_hdr.mx_sb_len = sizeof(_lastError.sense);
-    io_hdr.sbp = _lastError.sense;
-
     io_hdr.dxfer_direction = SG_DXFER_TO_DEV;
     io_hdr.dxfer_len = data.size;
     io_hdr.dxferp = data.data;
-
-    io_hdr.timeout = _operationTimeout;
 
     // Call ioctl for write data
     if( ioctl( this->fd(), SG_IO, &io_hdr ) < 0 ){
