@@ -110,6 +110,7 @@ private:
     IOMode _mode;
     SGDeviceInfo _info;
     SGError _lastError;
+    int _operationTimeout = 20000;
 
 private:
     void setReady(bool isReady = true);
@@ -117,6 +118,7 @@ private:
     void readInquiry();
     void readCapacity();
     void setLastError(struct sg_io_hdr* io_hdr);
+    void initIoHdr(struct sg_io_hdr* io_hdr);
 };
 
 #endif // SGDEVICE_H

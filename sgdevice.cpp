@@ -8,6 +8,8 @@
 //#include <stdlib.h>
 //#include <cstring>
 
+#include <cmath>
+
 #include <scsi/sg.h>
 #include <scsi/scsi_ioctl.h>
 #include <scsi/scsi.h>
@@ -39,36 +41,32 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
 
     byteint lba; lba.i = pos.lba;
 
-    /*char lba_bytes[sizeof(int)];
-    *reinterpret_cast<int*>(lba_bytes) = pos.lba;*/
-
     /*unsigned char cmd[6] =
     {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
-    unsigned char cmd[10] =
-    {SGCommand::Read10,reserved, lba.b[3],lba.b[2],lba.b[1],lba.b[0], reserved, 0,transfer_length, control_byte};
-    /*unsigned char cmd[16] =
-    {SGCommand::Read,0,0,0,0,0,0,0,0, pos.lba,0,0,1,0,0};*/
+
+    unsigned char cmd[10] = {
+        SGCommand::Read10,
+        reserved,
+        lba.b[3], lba.b[2], lba.b[1], lba.b[0],
+        reserved,
+        0,transfer_length, /// \todo get from pos
+        control_byte
+    };
+
 
     sg_io_hdr_t io_hdr;
-
-    memset(&io_hdr, 0, sizeof(sg_io_hdr_t));
-    io_hdr.interface_id = 'S';
+    this->initIoHdr( & io_hdr );
 
     io_hdr.cmd_len = sizeof(cmd);
     io_hdr.cmdp = cmd;
-
-    io_hdr.mx_sb_len = sizeof(_lastError.sense);
-    io_hdr.sbp = _lastError.sense;
 
     io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;
     io_hdr.dxfer_len = data.size;
     io_hdr.dxferp = data.data;
 
-    io_hdr.timeout = 20000;
-
     if( ioctl( this->fd(), SG_IO , &io_hdr ) < 0 ) {
-        this->setLastError( &io_hdr );
         std::cerr << "[ERR] Failed ioctl call(" << errno << ":" << strerror(errno) << ")" << std::endl;
+        this->setLastError( &io_hdr );
         return false;
     }
     this->setLastError( &io_hdr );
@@ -82,16 +80,19 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
     }
 
     byteint lba; lba.i = pos.lba;
+    byteint transferLength; transferLength.i = ::ceil( (double)data.size / (double)_info.lbaSize );
 
     // Prepare CMD
     /*unsigned char cmd[16] =
     {SGCommand::Write16,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};*/
-    unsigned char cmd[10] =
-    {SGCommand::Write10, 0, lba.b[3],lba.b[2],lba.b[1],lba.b[0], 0, 0,1, 0};
-
-    // Prepare data buffer
-    // unsigned char buffer[WRITE16_LEN];
-    unsigned char sense_buffer[32];
+    unsigned char cmd[10] = {
+        SGCommand::Write10, // Command
+        0, // WRPROTECT | DPO | FUA | Reserved | FUA_NV | Obsolete
+        lba.b[3], lba.b[2], lba.b[1], lba.b[0], // LBA 4 Byte
+        0,   // Reserver | GROUP NUMBER
+        transferLength.b[1], transferLength.b[0], // Transfer Length
+        0    // Control
+    };
 
     // Prepare sg_io_hdr
     sg_io_hdr_t io_hdr;
@@ -99,21 +100,21 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
     io_hdr.interface_id = 'S';
 
     io_hdr.cmd_len = sizeof(cmd);
-    io_hdr.cmdp = cmd
-            ;
-    io_hdr.mx_sb_len = sizeof(sense_buffer);
-    io_hdr.sbp = sense_buffer;
+    io_hdr.cmdp = cmd;
+
+    io_hdr.mx_sb_len = sizeof(_lastError.sense);
+    io_hdr.sbp = _lastError.sense;
 
     io_hdr.dxfer_direction = SG_DXFER_TO_DEV;
     io_hdr.dxfer_len = data.size;
     io_hdr.dxferp = data.data;
 
-    io_hdr.timeout = 20000;
+    io_hdr.timeout = _operationTimeout;
 
     // Call ioctl for write data
     if( ioctl( this->fd(), SG_IO, &io_hdr ) < 0 ){
-        this->setLastError( &io_hdr );
         std::cerr << "[ERR] Failed ioctl call(" << errno << ":" << strerror(errno) << ")" << std::endl;
+        this->setLastError( &io_hdr );
         return false;
     }
     this->setLastError( &io_hdr );
@@ -182,27 +183,19 @@ void SGDevice::readInquiry()
 
     // Prepare sg_io_hdr
     sg_io_hdr_t io_hdr;
-    memset(&io_hdr,0,sizeof(sg_io_hdr_t));
-
-    io_hdr.interface_id = 'S';
+    this->initIoHdr( &io_hdr );
     io_hdr.flags = SG_FLAG_LUN_INHIBIT;
 
     io_hdr.cmd_len = sizeof(cdb);
     io_hdr.cmdp = cdb;
 
-    io_hdr.mx_sb_len = sizeof(_lastError.sense);
-    io_hdr.sbp = _lastError.sense;
-
     io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;;
     io_hdr.dxfer_len = sizeof(data_buffer);
     io_hdr.dxferp = data_buffer;
 
-    io_hdr.timeout = 20000;
-
     if( ioctl(this->fd(), SG_IO, &io_hdr) < 0 ) {
-        this->setLastError( &io_hdr );
         std::cerr << "[ERR] Failed to read inquiry SGDevice(" << _deviceName << ")" << std::endl;
-        this->setReady( false );
+        this->setLastError( &io_hdr );
         return;
     }
     this->setLastError( &io_hdr );
@@ -231,33 +224,30 @@ void SGDevice::readCapacity()
 
     unsigned char data_buffer[8];
 
-    unsigned char evpd = 0;
-    unsigned char page_code = 0;
-    unsigned char cdb[10] =
-    {SGCommand::Capacity, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    unsigned char cdb[10] = {
+        SGCommand::Capacity, // Command
+        0, // Reserved | Obsolete
+        0, 0, 0, 0, // LBA
+        0, 0, // Reserved
+        0, // Reserved | PMI
+        0  // Control
+    };
 
     // Prepare sg_io_hdr
     sg_io_hdr_t io_hdr;
-    memset(&io_hdr,0,sizeof(sg_io_hdr_t));
-
-    io_hdr.interface_id = 'S';
+    this->initIoHdr( &io_hdr );
     io_hdr.flags = SG_FLAG_LUN_INHIBIT;
 
     io_hdr.cmd_len = sizeof(cdb);
     io_hdr.cmdp = cdb;
 
-    io_hdr.mx_sb_len = sizeof(_lastError.sense);
-    io_hdr.sbp = _lastError.sense;
-
     io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;;
     io_hdr.dxfer_len = sizeof(data_buffer);
     io_hdr.dxferp = data_buffer;
 
-    io_hdr.timeout = 20000;
-
     if( ioctl(this->fd(), SG_IO, &io_hdr) < 0 ) {
-        this->setLastError( &io_hdr );
         std::cerr << "[ERR] Failed to read capacity SGDevice(" << _deviceName << ")" << std::endl;
+        this->setLastError( &io_hdr );
         this->setReady( false );
         return;
     }
@@ -266,15 +256,16 @@ void SGDevice::readCapacity()
     // Set Capacity Data
     unsigned char *buffer = static_cast<unsigned char*>(io_hdr.dxferp);
     _info.lbaCount = int(
-                //(buffer[0]) << 24 | // DENSITY CODE
+                (buffer[0]) << 24 |
                 (buffer[1]) << 16 |
-                (buffer[2]) << 8 |
+                (buffer[2]) << 8  |
                 (buffer[3])
             );
 
     _info.lbaSize = int(
+                (buffer[4]) << 24 |
                 (buffer[5]) << 16 |
-                (buffer[6]) << 8 |
+                (buffer[6]) << 8  |
                 (buffer[7])
             );
 }
@@ -282,6 +273,17 @@ void SGDevice::readCapacity()
 void SGDevice::setLastError(sg_io_hdr *io_hdr)
 {
     _lastError.status = io_hdr->status;
-    memcpy(_lastError.sense, io_hdr->sbp, io_hdr->mx_sb_len);
+    memcpy(_lastError.sense, io_hdr->sbp, io_hdr->mx_sb_len); /// \todo copy from self to self ?
+}
+
+void SGDevice::initIoHdr(sg_io_hdr *io_hdr)
+{
+    memset(io_hdr,0,sizeof(sg_io_hdr_t));
+    io_hdr->interface_id = 'S';
+
+    io_hdr->mx_sb_len = sizeof(_lastError.sense);
+    io_hdr->sbp = _lastError.sense;
+
+    io_hdr->timeout = _operationTimeout;
 }
 
