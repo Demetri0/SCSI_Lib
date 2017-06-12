@@ -37,13 +37,15 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
     unsigned char control_byte = 0;
     const unsigned char reserved = 0;
 
+    byteint lba; lba.i = pos.lba;
+
     /*char lba_bytes[sizeof(int)];
     *reinterpret_cast<int*>(lba_bytes) = pos.lba;*/
 
     /*unsigned char cmd[6] =
     {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
     unsigned char cmd[10] =
-    {SGCommand::Read10,reserved, 0,0,0,pos.lba, reserved, 0,transfer_length, control_byte};
+    {SGCommand::Read10,reserved, lba.b[3],lba.b[2],lba.b[1],lba.b[0], reserved, 0,transfer_length, control_byte};
     /*unsigned char cmd[16] =
     {SGCommand::Read,0,0,0,0,0,0,0,0, pos.lba,0,0,1,0,0};*/
 
@@ -79,11 +81,13 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
         return false;
     }
 
+    byteint lba; lba.i = pos.lba;
+
     // Prepare CMD
     /*unsigned char cmd[16] =
     {SGCommand::Write16,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};*/
     unsigned char cmd[10] =
-    {SGCommand::Write10, 0, 0,0,0,pos.lba, 0, 0,1, 0};
+    {SGCommand::Write10, 0, lba.b[3],lba.b[2],lba.b[1],lba.b[0], 0, 0,1, 0};
 
     // Prepare data buffer
     // unsigned char buffer[WRITE16_LEN];

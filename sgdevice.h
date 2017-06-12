@@ -97,6 +97,10 @@ private:
       private:
         Type _type = Type::None;
     };
+    union byteint {
+        unsigned char b[sizeof(int)];
+        int i;
+    };
 
 private:
 //    static const int SENSE_LEN = 255;

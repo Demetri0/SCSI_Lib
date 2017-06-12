@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 
 
     SGDevice::SGData data(new unsigned char[512], 512);
-    SGDevice::SGLocation loc(8);
+    SGDevice::SGLocation loc(4);
 
     //*
     // Читаем что есть
