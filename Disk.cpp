@@ -89,29 +89,29 @@ void Disk::show_hdr_outputs(struct sg_io_hdr * hdr) {//Print result
     printf("INFO RESULT \n");
     printf("--------------------------------\n");
     printf("TimeOut:%d\n", hdr->timeout);
-	printf("status:%d\n", hdr->status);
-	printf("flags:%d\n", hdr->flags);
-	printf("DXFR_len:%d\n", hdr->dxfer_len);
-	printf("User memory (DXFR)>>{\n");
-	for (int i = 0; i< sizeof(buffer); i++) {
+    printf("status:%d\n", hdr->status);
+    printf("flags:%d\n", hdr->flags);
+    printf("DXFR_len:%d\n", hdr->dxfer_len);
+    printf("User memory (DXFR)>>{\n");
+    for (int i = 0; i< sizeof(buffer); i++) {
         printf("%d",buffer[i]);
     }
     printf("\n}\n");
-	printf("masked_status:%d\n", hdr->masked_status);
-	printf("msg_status:%d\n", hdr->msg_status);
-	printf("sb_len_wr:%d\n", hdr->sb_len_wr);
-	printf("host_status:%d\n", hdr->host_status);
-	printf("driver_status:%d\n", hdr->driver_status);
-	printf("resid:%d\n", hdr->resid);
-	printf("duration:%d\n", hdr->duration);
-	printf("info:%d\n", hdr->info);
-	printf("Erro_buf_max_len:%d\n", hdr->mx_sb_len);
-	printf("ERROR BUF>>{\n");
-	for (int i = 0; i< sizeof(buffer_err); i++) {
+    printf("masked_status:%d\n", hdr->masked_status);
+    printf("msg_status:%d\n", hdr->msg_status);
+    printf("sb_len_wr:%d\n", hdr->sb_len_wr);
+    printf("host_status:%d\n", hdr->host_status);
+    printf("driver_status:%d\n", hdr->driver_status);
+    printf("resid:%d\n", hdr->resid);
+    printf("duration:%d\n", hdr->duration);
+    printf("info:%d\n", hdr->info);
+    printf("Erro_buf_max_len:%d\n", hdr->mx_sb_len);
+    printf("ERROR BUF>>{\n");
+    for (int i = 0; i< sizeof(buffer_err); i++) {
         printf("%d",buffer_err[i]);
     }
     printf("\n}\n");
-	printf("--------------------------------\n");
+    printf("--------------------------------\n");
 }
 //--Command
 int Disk::execute_test_ready(int fd, int page_code, int evpd, struct sg_io_hdr * p_hdr ) {

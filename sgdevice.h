@@ -39,6 +39,7 @@ public:
         char product[16] = {0};
         char version[4]  = {0};
         int  lbaCount    = 0;
+        int  lbaSize     = 0;
         char data[255]   = {0};
         /*
         SGDeviceInfo& operator=(const SGDeviceInfo& other){
@@ -73,10 +74,12 @@ public:
 private:
     struct SGCommand {
         enum Type {
-            None,
-            Read,
-            Write,
-            Inquiry
+            None      = -1,
+            TestReady = 0x00,
+            Read      = 0x88,
+            Write     = 0x8A,
+            Inquiry   = 0x12,
+            Capacity  = 0x25
         };
         SGCommand(Type t):_type(t){}
       private:

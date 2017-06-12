@@ -57,10 +57,11 @@ void setTestData(SGDevice::SGData &data){
 }
 void printInquiry(SGDevice::SGDeviceInfo info){
     std::cout << "SGDeviceInfo {" << std::endl;
-    std::cout << "  " << "Vendor: "  << info.vendor   << std::endl;
-    std::cout << "  " << "Product: " << info.product  << std::endl;
-    std::cout << "  " << "Version: " << info.version  << std::endl;
-    std::cout << "  " << "Max LBA: " << info.lbaCount << std::endl;
+    std::cout << "  " << "Vendor: "    << info.vendor   << std::endl;
+    std::cout << "  " << "Product: "   << info.product  << std::endl;
+    std::cout << "  " << "Version: "   << info.version  << std::endl;
+    std::cout << "  " << "LBA Count: " << info.lbaCount << std::endl;
+    std::cout << "  " << "LBA Size: "  << info.lbaSize  << std::endl;
     std::cout << '}' << std::endl;
 }
 
@@ -79,18 +80,33 @@ int main(int argc, char* argv[])
     SGDevice::SGData data(new unsigned char[512], 512);
     SGDevice::SGLocation loc(2);
 
+    //*
     // Читаем что есть
     if( sdb.read(loc, data) ){
         printDataString(data);
+    } else {
+        std::cerr << "Не удалось прочитать данные" << std::endl;
+        SGDevice::SGError err = sdb.lastError();
+        std::cerr << "[ERR] Status: " << err.status << std::endl << "Sense: ";
+        for (int i = 0; i < 255; ++i) {
+            printf("%x ", err.sense[i]);
+        }
+        std::cerr << std::endl;
     }
+    /*
     setTestData(data);
     if( sdb.write(loc, data) ){
         std::cout << "Writed success." << std::endl;
+    } else {
+        std::cerr << "Не удалось записать данные" << std::endl;
     }
     // Читаем что написали
     if( sdb.read(loc, data) ){
         printDataString(data);
+    } else {
+        std::cerr << "Не удалось прочитать данные" << std::endl;
     }
+    //*/
 
     return 0;
 }

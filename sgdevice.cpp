@@ -34,7 +34,7 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
     }
     // Prepare
     unsigned char read16cmd[16] =
-    {0x88,0,0,0,0,0,0,0,0, pos.lba,0,0,1,0,0};
+    {SGCommand::Read,0,0,0,0,0,0,0,0, pos.lba,0,0,1,0,0};
 
     // Buffers for data
     // unsigned char data_buffer[512]; // changing to data.data[data.size]
@@ -61,7 +61,7 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
         return false;
     }
     this->setLastError( &io_hdr );
-    return true;
+    return _lastError.status == 0;;
 }
 
 bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
@@ -72,7 +72,7 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
 
     // Prepare CMD
     unsigned char w16CmdBlk[16] =
-    {0x8A,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};
+    {SGCommand::Write,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};
 
     // Prepare data buffer
     // unsigned char buffer[WRITE16_LEN];
@@ -98,7 +98,7 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
         return false;
     }
     this->setLastError( &io_hdr );
-    return true;
+    return _lastError.status == 0;
 }
 
 SGDevice::SGDeviceInfo SGDevice::deviceInfo() const
@@ -158,7 +158,9 @@ void SGDevice::readInquiry()
     unsigned char evpd = 0;
     unsigned char page_code = 0;
     unsigned char cdb[6] =
-    {0x12, evpd & 1, page_code & 0xff, 0, 0xff, 0};
+    {SGCommand::Inquiry, evpd & 1, page_code & 0xff, 0, 0xff, 0};
+    /* (EVPD == page_code == 0) - Общая информация */
+    /* (EVPD == page_code == 1) - Специфичная вендорная информация */
 
     // Prepare sg_io_hdr
     sg_io_hdr_t io_hdr;
@@ -216,7 +218,7 @@ void SGDevice::readCapacity()
     unsigned char evpd = 0;
     unsigned char page_code = 0;
     unsigned char cdb[10] =
-    {0x25, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    {SGCommand::Capacity, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     // Prepare sg_io_hdr
     sg_io_hdr_t io_hdr;
@@ -248,10 +250,16 @@ void SGDevice::readCapacity()
     // Set Capacity Data
     unsigned char *buffer = static_cast<unsigned char*>(io_hdr.dxferp);
     _info.lbaCount = int(
-                (buffer[0]) << 24 |
+                //(buffer[0]) << 24 | // DENSITY CODE
                 (buffer[1]) << 16 |
                 (buffer[2]) << 8 |
                 (buffer[3])
+            );
+
+    _info.lbaSize = int(
+                (buffer[5]) << 16 |
+                (buffer[6]) << 8 |
+                (buffer[7])
             );
 }
 
