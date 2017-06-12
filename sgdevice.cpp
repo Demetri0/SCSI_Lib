@@ -44,7 +44,6 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
     /*unsigned char cmd[6] =
     {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
 
-    printf("X: %.2x %.2x\n", transferLength.b[1], transferLength.b[0]);
     unsigned char cmd[10] = {
         SGCommand::Read10,
         reserved,
