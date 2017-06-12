@@ -36,11 +36,12 @@ void printDataString(SGDevice::SGData data){
     }
     std::cout << std::endl << "}" << std::endl;
 }
-void printError(SGDevice::SGError &err){
+void printError(const SGDevice::SGError &err){
     std::cout << "SGError {" << std::endl;
     std::cout << "  Status: " << err.status << std::endl;
-    for (size_t i = 0; i < 255; ++i) {
-        printf("  Sense: %c", err.sense[i]);
+    std::cout << "  Sense: ";
+    for (size_t i = 0; i < sizeof(err.sense); ++i) {
+        printf("%.2x", err.sense[i]);
     }
     std::cout << std::endl << "}" << std::endl;
 }
@@ -78,7 +79,7 @@ int main(int argc, char* argv[])
 
 
     SGDevice::SGData data(new unsigned char[512], 512);
-    SGDevice::SGLocation loc(2);
+    SGDevice::SGLocation loc(4);
 
     //*
     // Читаем что есть
@@ -86,19 +87,16 @@ int main(int argc, char* argv[])
         printDataString(data);
     } else {
         std::cerr << "Не удалось прочитать данные" << std::endl;
-        SGDevice::SGError err = sdb.lastError();
-        std::cerr << "[ERR] Status: " << err.status << std::endl << "Sense: ";
-        for (int i = 0; i < 255; ++i) {
-            printf("%x ", err.sense[i]);
-        }
-        std::cerr << std::endl;
+        printError( sdb.lastError() );
     }
-    /*
+    //*/
+    //*
     setTestData(data);
     if( sdb.write(loc, data) ){
         std::cout << "Writed success." << std::endl;
     } else {
         std::cerr << "Не удалось записать данные" << std::endl;
+        printError( sdb.lastError() );
     }
     // Читаем что написали
     if( sdb.read(loc, data) ){

@@ -35,12 +35,11 @@ public:
         ReadWrite = O_RDWR
     } IOMode;
     typedef struct SGDeviceInfo {
-        char vendor[8]   = {0};
-        char product[16] = {0};
-        char version[4]  = {0};
+        char vendor[9]   = {0};
+        char product[17] = {0};
+        char version[5]  = {0};
         int  lbaCount    = 0;
         int  lbaSize     = 0;
-        char data[255]   = {0};
         /*
         SGDeviceInfo& operator=(const SGDeviceInfo& other){
             strcpy(this->vendor,  other.vendor);
@@ -52,8 +51,11 @@ public:
         //*/
     } SGDeviceInfo;
     typedef struct SGError {
-        char sense[255] = {0};
-        int  status     =  0;
+        unsigned char sense[32] = {0};
+        int  status    =  0;
+        bool isOk() const {
+            return this->status == 0;
+        }
     } SGError;
 
 public:
@@ -64,7 +66,7 @@ public:
     bool write(SGLocation pos, SGData data);
 
     SGDeviceInfo deviceInfo() const;
-    SGError lastError() const;
+    const SGError &lastError() const;
 
     bool isReady() const;
 
@@ -76,7 +78,8 @@ private:
         enum Type {
             None      = -1,
             TestReady = 0x00,
-            Read      = 0x88,
+            Read6     = 0x08,
+            Read16    = 0x88,
             Write     = 0x8A,
             Inquiry   = 0x12,
             Capacity  = 0x25

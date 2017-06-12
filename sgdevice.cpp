@@ -33,35 +33,44 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
         return false;
     }
     // Prepare
-    unsigned char read16cmd[16] =
-    {SGCommand::Read,0,0,0,0,0,0,0,0, pos.lba,0,0,1,0,0};
+    unsigned char transfer_length = 1;
+    unsigned char control_byte = 0;
+    const unsigned char reserved = 0;
 
-    // Buffers for data
-    // unsigned char data_buffer[512]; // changing to data.data[data.size]
-    unsigned char sense_buffer[32];
+    /*char lba_bytes[sizeof(int)];
+    *reinterpret_cast<int*>(lba_bytes) = pos.lba;*/
 
-    // Prepare SG struct
-    sg_io_hdr_t io_hdr; //creating a object of sg_io_hdr structure
+    /*unsigned char read6cmd[6] =
+    {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
+    unsigned char read10cmd[10] =
+    {0x28,reserved, 0,0,0,pos.lba, reserved, 0,transfer_length, control_byte};
+    /*unsigned char read16cmd[16] =
+    {SGCommand::Read,0,0,0,0,0,0,0,0, pos.lba,0,0,1,0,0};*/
+
+    sg_io_hdr_t io_hdr;
 
     memset(&io_hdr, 0, sizeof(sg_io_hdr_t));
     io_hdr.interface_id = 'S';
-    io_hdr.cmd_len = sizeof(read16cmd);         // 16 bytes
-    io_hdr.mx_sb_len = sizeof(sense_buffer);    // 32 bytes
-    io_hdr.dxfer_direction = SG_DXFER_FROM_DEV; // direction of data transfer
-    io_hdr.dxfer_len = data.size;
-    io_hdr.dxferp = data.data; // pointer of data buffer where data will come
-    io_hdr.cmdp = read16cmd;   // pointer to the cdb
-    io_hdr.sbp = sense_buffer; // pointer to the sense buffer
-    io_hdr.timeout = 20000;    // command time out duration
 
-    // Run ioctl
+    io_hdr.cmd_len = sizeof(read10cmd);
+    io_hdr.cmdp = read10cmd;
+
+    io_hdr.mx_sb_len = sizeof(_lastError.sense);
+    io_hdr.sbp = _lastError.sense;
+
+    io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;
+    io_hdr.dxfer_len = data.size;
+    io_hdr.dxferp = data.data;
+
+    io_hdr.timeout = 20000;
+
     if( ioctl( this->fd(), SG_IO , &io_hdr ) < 0 ) {
         this->setLastError( &io_hdr );
         std::cerr << "[ERR] Failed ioctl call(" << errno << ":" << strerror(errno) << ")" << std::endl;
         return false;
     }
     this->setLastError( &io_hdr );
-    return _lastError.status == 0;;
+    return _lastError.isOk();
 }
 
 bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
@@ -71,8 +80,10 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
     }
 
     // Prepare CMD
-    unsigned char w16CmdBlk[16] =
-    {SGCommand::Write,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};
+    /*unsigned char w16CmdBlk[16] =
+    {SGCommand::Write,0,0,0,0,0,0,0,0, pos.lba,0,0,0,1,0,0};*/
+    unsigned char cmd[10] =
+    {0x2A, 0, 0,0,0,pos.lba, 0, 0,1, 0};
 
     // Prepare data buffer
     // unsigned char buffer[WRITE16_LEN];
@@ -82,13 +93,17 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
     sg_io_hdr_t io_hdr;
     memset(&io_hdr,0,sizeof(sg_io_hdr_t));
     io_hdr.interface_id = 'S';
-    io_hdr.cmd_len = sizeof(w16CmdBlk);
+
+    io_hdr.cmd_len = sizeof(cmd);
+    io_hdr.cmdp = cmd
+            ;
     io_hdr.mx_sb_len = sizeof(sense_buffer);
+    io_hdr.sbp = sense_buffer;
+
     io_hdr.dxfer_direction = SG_DXFER_TO_DEV;
     io_hdr.dxfer_len = data.size;
     io_hdr.dxferp = data.data;
-    io_hdr.cmdp = w16CmdBlk;
-    io_hdr.sbp = sense_buffer;
+
     io_hdr.timeout = 20000;
 
     // Call ioctl for write data
@@ -98,7 +113,7 @@ bool SGDevice::write(SGDevice::SGLocation pos, SGDevice::SGData data)
         return false;
     }
     this->setLastError( &io_hdr );
-    return _lastError.status == 0;
+    return _lastError.isOk();
 }
 
 SGDevice::SGDeviceInfo SGDevice::deviceInfo() const
@@ -106,7 +121,7 @@ SGDevice::SGDeviceInfo SGDevice::deviceInfo() const
     return _info;
 }
 
-SGDevice::SGError SGDevice::lastError() const
+const SGDevice::SGError &SGDevice::lastError() const
 {
     return _lastError;
 }
@@ -152,8 +167,7 @@ void SGDevice::readInquiry()
         return;
     }
 
-    unsigned char sense_buffer[255];
-    unsigned char data_buffer[32*256];
+    unsigned char data_buffer[144];
 
     unsigned char evpd = 0;
     unsigned char page_code = 0;
@@ -172,8 +186,8 @@ void SGDevice::readInquiry()
     io_hdr.cmd_len = sizeof(cdb);
     io_hdr.cmdp = cdb;
 
-    io_hdr.mx_sb_len = sizeof(sense_buffer);
-    io_hdr.sbp = sense_buffer;
+    io_hdr.mx_sb_len = sizeof(_lastError.sense);
+    io_hdr.sbp = _lastError.sense;
 
     io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;;
     io_hdr.dxfer_len = sizeof(data_buffer);
@@ -203,7 +217,6 @@ void SGDevice::readInquiry()
     for(int i = 32; i < 36; ++i) {
         _info.version[i-32] = buffer[i];
     }
-
 }
 
 void SGDevice::readCapacity()
@@ -212,8 +225,7 @@ void SGDevice::readCapacity()
         return;
     }
 
-    unsigned char sense_buffer[255];
-    unsigned char data_buffer[32*256];
+    unsigned char data_buffer[8];
 
     unsigned char evpd = 0;
     unsigned char page_code = 0;
@@ -230,8 +242,8 @@ void SGDevice::readCapacity()
     io_hdr.cmd_len = sizeof(cdb);
     io_hdr.cmdp = cdb;
 
-    io_hdr.mx_sb_len = sizeof(sense_buffer);
-    io_hdr.sbp = sense_buffer;
+    io_hdr.mx_sb_len = sizeof(_lastError.sense);
+    io_hdr.sbp = _lastError.sense;
 
     io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;;
     io_hdr.dxfer_len = sizeof(data_buffer);
