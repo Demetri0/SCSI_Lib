@@ -35,11 +35,11 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
         return false;
     }
     // Prepare
-    unsigned char transfer_length = 1;
     unsigned char control_byte = 0;
     const unsigned char reserved = 0;
 
     byteint lba; lba.i = pos.lba;
+    byteint transferLength; transferLength.i = pos.readBlocksCount;
 
     /*unsigned char cmd[6] =
     {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
@@ -49,7 +49,7 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
         reserved,
         lba.b[3], lba.b[2], lba.b[1], lba.b[0],
         reserved,
-        0,transfer_length, /// \todo get from pos
+        transferLength.b[1], transferLength.b[0],
         control_byte
     };
 

@@ -9,12 +9,15 @@ class SGDevice
 {
 public:
     typedef struct SGLocation {
-        unsigned char lba = 0;
-        SGLocation(int lba){
+        int lba = 0;
+        int readBlocksCount = 1;
+        SGLocation(int lba, int readBlocksCount = 1){
             this->lba = lba;
+            this->readBlocksCount = readBlocksCount;
         }
         SGLocation(std::initializer_list<int> il){
             this->lba = *(il.begin());
+            this->readBlocksCount = *(il.begin()+1);
         }
     } SGLocation;
     typedef struct SGData {
