@@ -40,6 +40,10 @@ bool SGDevice::read(SGDevice::SGLocation pos, SGDevice::SGData data)
 
     byteint lba; lba.i = pos.lba;
     byteint transferLength; transferLength.i = pos.readBlocksCount;
+    if( transferLength.i < 1 ){
+        std::cerr << "[WARN] Transfer Length can't lower 1. Value is set to 1;" << std::endl;
+        transferLength.i = 1;
+    }
 
     /*unsigned char cmd[6] =
     {0x08,reserved, 0,pos.lba, transfer_length,control_byte};*/
