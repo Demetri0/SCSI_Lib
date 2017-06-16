@@ -7,13 +7,19 @@ CppApplication {
 
     files: [
         "main.cpp",
+        "myfs.cpp",
+        "myfs.h",
+        "network.cpp",
+        "network.h",
         "sgdevice.h",
-        "sgdevice.cpp"
+        "sgdevice.cpp",
     ]
 
     Group {     // Properties for the produced executable
         fileTagsFilter: product.type
         qbs.install: true
     }
+
+    cpp.dynamicLibraries: "pthread"
 }
 

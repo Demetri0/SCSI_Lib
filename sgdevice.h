@@ -10,7 +10,7 @@
 class SGDevice
 {
 public:
-    typedef struct SGLocation {
+    struct SGLocation {
         int lba = 0;
         int readBlocksCount = 1;
         SGLocation(int lba, int readBlocksCount = 1){
@@ -23,8 +23,8 @@ public:
                 this->readBlocksCount = *(il.begin()+1);
             }
         }
-    } SGLocation;
-    typedef struct SGData {
+    };
+    struct SGData {
         unsigned char *data = nullptr;
         size_t size;
         SGData(unsigned char *data, size_t size){
@@ -35,17 +35,17 @@ public:
             this->data = new unsigned char[allocSize];
             this->size = allocSize;
         }
-    } SGData;
-    typedef enum IOMode {
+    };
+    enum IOMode {
         ReadOnly  = O_RDONLY,
         WriteOnly = O_WRONLY,
         ReadWrite = O_RDWR
-    } IOMode;
-    typedef struct SGDeviceInfo {
+    };
+    struct SGDeviceInfo {
         char vendor[9]   = {0};
         char product[17] = {0};
         char version[5]  = {0};
-        int  lbaCount    = 0;
+        int  lastLba     = 0;
         int  lbaSize     = 0;
         /*
         SGDeviceInfo& operator=(const SGDeviceInfo& other){
@@ -56,14 +56,14 @@ public:
             return *this;
         }
         //*/
-    } SGDeviceInfo;
-    typedef struct SGError {
+    };
+    struct SGError {
         unsigned char sense[32] = {0};
         int  status    =  0;
         bool isOk() const {
             return this->status == 0;
         }
-    } SGError;
+    };
 
 public:
     SGDevice(const char *devPath, IOMode mode = IOMode::ReadWrite);
@@ -100,9 +100,6 @@ private:
             Inquiry   = 0x12,
             Capacity  = 0x25
         };
-        SGCommand(Type t):_type(t){}
-      private:
-        Type _type = Type::None;
     };
     union byteint {
         unsigned char b[sizeof(int)];

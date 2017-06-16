@@ -253,7 +253,7 @@ void SGDevice::readCapacity()
 
     // Set Capacity Data
     unsigned char *buffer = static_cast<unsigned char*>(io_hdr.dxferp);
-    _info.lbaCount = int(
+    _info.lastLba = int(
                 (buffer[0]) << 24 |
                 (buffer[1]) << 16 |
                 (buffer[2]) << 8  |

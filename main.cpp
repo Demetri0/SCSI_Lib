@@ -19,6 +19,8 @@
 
 #include "sgdevice.h"
 
+#include <thread>
+
 void printData(SGDevice::SGData data){
     std::cout << "SGData("<< data.size <<") {" << std::endl;
     for (size_t i = 0; i < data.size; ++i) {
@@ -61,12 +63,22 @@ void printInquiry(SGDevice::SGDeviceInfo info){
     std::cout << "  " << "Vendor: "    << info.vendor   << std::endl;
     std::cout << "  " << "Product: "   << info.product  << std::endl;
     std::cout << "  " << "Version: "   << info.version  << std::endl;
-    std::cout << "  " << "LBA Count: " << info.lbaCount << std::endl;
+    std::cout << "  " << "LBA Count: " << info.lastLba << std::endl;
     std::cout << "  " << "LBA Size: "  << info.lbaSize  << std::endl;
     std::cout << '}' << std::endl;
 }
 
-int main(int argc, char* argv[])
+void thrdFun(){
+    std::cout << "Thread" << std::endl;
+}
+
+int main(int argc, char** argv){
+    std::thread t(thrdFun);
+    t.join();
+    return 0;
+}
+
+int main1(int argc, char* argv[])
 {
     if( argc < 2 ){
         std::cout << "Usage: " << argv[0] << " <device>" << std::endl;
@@ -75,11 +87,15 @@ int main(int argc, char* argv[])
     }
 
     SGDevice sdb(argv[1], SGDevice::ReadWrite);
+    if( ! sdb.isReady() ){
+        return 2;
+    }
     printInquiry( sdb.deviceInfo() );
 
 
     SGDevice::SGData data(new unsigned char[1024], 1024);
     SGDevice::SGLocation loc = {4,2};
+    //*/
 
     //*
     // Читаем что есть
