@@ -12,6 +12,42 @@
 //#include <sys/stat.h>
 //#include <stdio.h>
 
+
+
+// ---
+int sendall(int sockfd, char *msg, int len, int flags)
+{
+    int total = 0;
+    int n;
+
+    while(total < len){
+        n = ::send(sockfd, msg+total, len-total, flags);
+        if(n == -1){
+            break;
+        }
+        total += n;
+    }
+
+    return (n == -1)? -1 : total;
+}
+int recvall(int sockfd, char *buf, int len, int flags)
+{
+    int total = 0;
+    int n;
+
+    while(total < len){
+        n = ::recv(sockfd, buf+total, len-total, flags);
+        if( n <= 0 ){
+            break;
+        }
+        total += n;
+    }
+
+    return (n == -1)? -1 : total;
+}
+// ---
+
+/*
 int GetDataDisk() // принемаем сообщение
 {
     int sock, listener;
@@ -80,29 +116,72 @@ int mai42n()
 
     return 0;
 }
-
-Network::InetAddr::InetAddr(int host, short int port)
+//*/
+Network::InetAddr::InetAddr(unsigned long host, short int port)
 {
     _addr.sin_family = AF_INET;
     _addr.sin_addr.s_addr = host;
     _addr.sin_port = port;
-//    _addr.sin_zero = 0;
 }
 
 Network::InetAddr::InetAddr(const char *host, short int port)
 {
     _addr.sin_family = AF_INET;
-    _addr.sin_addr.s_addr = inet_addr(host);
-    _addr.sin_port = port;
-//    _addr.sin_zero = 0;
+    _addr.sin_addr.s_addr = ::inet_addr(host);
+    _addr.sin_port = ::htons(port);
 }
 
-Network::InetAddr::InetAddr(::sockaddr_in addr)
+Network::InetAddr::InetAddr(::sockaddr_in *addr)
 {
-    _addr = addr;
+    _addr = *addr;
 }
 
-sockaddr_in Network::InetAddr::sockaddr_in()
+sockaddr_in *Network::InetAddr::sockaddr_in()
 {
-    return _addr;
+    return &_addr;
+}
+
+Network::TCPServer::TCPServer()
+{
+    _sockfd = ::socket(AF_INET, SOCK_STREAM, 0);
+}
+
+bool Network::TCPServer::listen(InetAddr& addr)
+{
+    sockaddr *saddr = (sockaddr*)addr.sockaddr_in();
+    if( 0 != ::bind( _sockfd, saddr, sizeof(saddr) ) ){
+        return false;
+    }
+    if( 0 != ::listen(_sockfd, _queueLength) ){
+        return false;
+    }
+
+    _isListening = true;
+
+    while( true ){
+        int sockfd = ::accept(_sockfd, nullptr, nullptr); /// \todo accept user
+        if( ! sockfd ){
+            /// \todo log and continue;
+            return false;
+        }
+
+        char buf[1024];
+        int bytesReaded = ::recvall(sockfd, buf, sizeof(buf), _flags);
+
+        /// \todo messageRecieved(sockaddr, sockfd, message, len)
+
+        ::close( sockfd );
+    }
+
+    return true;
+}
+
+bool Network::TCPServer::isListening() const
+{
+    return _isListening;
+}
+
+void Network::TCPServer::close()
+{
+    ::close( _sockfd );
 }
