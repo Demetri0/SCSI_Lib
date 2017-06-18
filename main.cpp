@@ -21,6 +21,8 @@
 
 #include <thread>
 
+#include "network.h"
+
 void printData(SGDevice::SGData data){
     std::cout << "SGData("<< data.size <<") {" << std::endl;
     for (size_t i = 0; i < data.size; ++i) {
@@ -68,6 +70,7 @@ void printInquiry(SGDevice::SGDeviceInfo info){
     std::cout << '}' << std::endl;
 }
 
+/*
 void thrdFun(){
     std::cout << "Thread" << std::endl;
 }
@@ -77,15 +80,39 @@ int main(int argc, char** argv){
     t.join();
     return 0;
 }
+//*/
 
-int main1(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     if( argc < 2 ){
         std::cout << "Usage: " << argv[0] << " <device>" << std::endl;
         std::cout << "\t <device> - is a block device like '/dev/sda'" << std::endl;
         return 1;
     }
+    bool isServer = false;
+    if( argc > 2 ){
+        isServer = (*argv[2]) == '1';
+    }
 
+    Network::InetAddr addr("127.0.0.1", 7878);
+    if( isServer ){
+        Network::TCPServer srv;
+        srv.onDataRecieved( [=](int sockfd, Network::InetAddr* useraddr, char* message, int len ){
+            std::cout << "Recieved: " << message << std::endl;
+        });
+        srv.listen( addr );
+        srv.close();
+    } else {
+        Network::TCPSocket sock;
+        if( ! sock.connect( addr ) ){
+            std::cout << "Error connected" << std::endl;
+            return 1;
+        }
+        sock.send("Hello from Demetri0", 21);
+        sock.close();
+    }
+
+    /*
     SGDevice sdb(argv[1], SGDevice::ReadWrite);
     if( ! sdb.isReady() ){
         return 2;
@@ -97,7 +124,7 @@ int main1(int argc, char* argv[])
     SGDevice::SGLocation loc = {4,2};
     //*/
 
-    //*
+    /*
     // Читаем что есть
     if( sdb.read(loc, data) ){
         printDataString(data);

@@ -6,6 +6,9 @@
 
 #include <netinet/in.h> // sockaddr_in
 
+#include <vector>
+#include <functional>
+
 namespace Network {
 
     /*
@@ -38,8 +41,16 @@ namespace Network {
         ::sockaddr_in* sockaddr_in();
     };
 
-    class TCPClient {
+    class TCPSocket {
+    private:
+        int _sockfd = 0;
+        int _flags = 0;
 
+    public:
+        TCPSocket();
+        bool connect(InetAddr &addr);
+        bool send(char *data, int size);
+        bool close();
     };
 
     class TCPServer {
@@ -49,14 +60,20 @@ namespace Network {
         int _flags = 0;
         bool _isListening = false;
 
+        std::vector< std::function<void(int,InetAddr*,char*,int)> > _callbacks;
+        std::vector<int> _userSockets;
+
     public:
         TCPServer();
+        ~TCPServer();
         bool listen(InetAddr &addr);
         bool isListening() const;
-        void close();
+        bool close();
+
+        void onDataRecieved(std::function<void(int,InetAddr*,char*,int)> callback);
 
     private:
-
+        void dataRecieed(int sockfd, InetAddr* addr, char* message, int len);
     };
 
 }
