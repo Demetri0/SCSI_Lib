@@ -6,6 +6,7 @@
 
 #include <netinet/in.h> // sockaddr_in
 
+#include <set>
 #include <vector>
 #include <functional>
 
@@ -65,7 +66,7 @@ namespace Network {
         bool _isListening = false;
 
         std::vector< std::function<void(int,InetAddr*,char*,int)> > _callbacks;
-        std::vector<int> _userSockets;
+        std::set<int> _userSockets;
 
     public:
         TCPServer();
@@ -77,7 +78,7 @@ namespace Network {
         void onDataRecieved(std::function<void(int,InetAddr*,char*,int)> callback);
 
     private:
-        void dataRecieed(int sockfd, InetAddr* addr, char* message, int len);
+        void dataRecieved(int sockfd, InetAddr* addr, char* message, int len);
     };
 
 }

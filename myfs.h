@@ -7,10 +7,10 @@ class MyFS
 {
 private:
     char _magicNumber = 0xD3;
-    int32_t _sourceIp;
-    const char _sourceDevice[255];
-    int32_t _destIp;
-    const char _destDevice[255];
+    u_int32_t _sourceIp = 0;
+    char _sourceDevice[255];
+    u_int32_t _destIp = 0;
+    char _destDevice[255];
 
 public:
     MyFS();

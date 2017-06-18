@@ -73,6 +73,7 @@ Network::TCPServer::~TCPServer()
     for( auto userSock : _userSockets ){
         ::close( userSock );
     }
+    ::close( _sockfd );
 }
 
 bool Network::TCPServer::listen(InetAddr& addr)
@@ -91,6 +92,7 @@ bool Network::TCPServer::listen(InetAddr& addr)
         sockaddr *usersockaddr = new sockaddr;
         unsigned int usersockaddrlen = 0;
         int sockfd = ::accept(_sockfd, usersockaddr, &usersockaddrlen);
+        std::cout << "Accept: " << sockfd << " Old: " << _sockfd << std::endl;
         if( ! sockfd ){
             std::cerr << "Cannot accept message errno(" << errno << ")" << std::endl;
             continue;
@@ -101,10 +103,9 @@ bool Network::TCPServer::listen(InetAddr& addr)
 
         InetAddr *user = new InetAddr(  (sockaddr_in*)usersockaddr  );
         delete usersockaddr;
-        dataRecieed(sockfd, user, buf, bytesReaded);
+        dataRecieved(sockfd, user, buf, bytesReaded);
 
-//        ::close(sockfd);
-        _userSockets.push_back( sockfd );
+        _userSockets.insert(sockfd);
     }
 
     return true;
@@ -125,7 +126,7 @@ void Network::TCPServer::onDataRecieved(std::function<void (int, InetAddr *, cha
     _callbacks.push_back( callback );
 }
 
-void Network::TCPServer::dataRecieed(int sockfd, InetAddr *addr, char *message, int len)
+void Network::TCPServer::dataRecieved(int sockfd, InetAddr *addr, char *message, int len)
 {
     for( auto cb : _callbacks ){
         if( cb ){
