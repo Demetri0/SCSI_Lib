@@ -1,17 +1,16 @@
 #ifndef MYFS_H
 #define MYFS_H
 
+#include <sys/types.h>
 
 class MyFS
 {
 private:
-    typedef struct {
-        unsigned int ipv4;
-        int port;
-    } NetAddr;
-    unsigned char _magicNumber = 0;
-    unsigned int _localIp = 0;
-    unsigned int _netIp = 0;
+    char _magicNumber = 0xD3;
+    int32_t _sourceIp;
+    const char _sourceDevice[255];
+    int32_t _destIp;
+    const char _destDevice[255];
 
 public:
     MyFS();

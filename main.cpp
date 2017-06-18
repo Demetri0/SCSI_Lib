@@ -1,26 +1,7 @@
 #include <iostream>
-//#include <unistd.h>
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <cstring>
-#include "Disk.h"
-
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <linux/fs.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <iostream>
-//#include <fcntl.h>
 
 #include "sgdevice.h"
-
-#include <thread>
-
 #include "network.h"
 
 void printData(SGDevice::SGData data){
@@ -99,6 +80,10 @@ int main(int argc, char* argv[])
         Network::TCPServer srv;
         srv.onDataRecieved( [=](int sockfd, Network::InetAddr* useraddr, char* message, int len ){
             std::cout << "Recieved: " << message << std::endl;
+            ::send(sockfd, "Data recieved success", 23, 0);
+            ::close(sockfd);
+            delete useraddr;
+            delete message;
         });
         srv.listen( addr );
         srv.close();
@@ -108,6 +93,10 @@ int main(int argc, char* argv[])
             std::cout << "Error connected" << std::endl;
             return 1;
         }
+        sock.onReply([=](int sockfd, char *message, int len){
+            std::cout << "Server reply: " << message << std::endl;
+            delete message;
+        });
         sock.send("Hello from Demetri0", 21);
         sock.close();
     }

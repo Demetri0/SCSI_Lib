@@ -46,11 +46,15 @@ namespace Network {
         int _sockfd = 0;
         int _flags = 0;
 
+        std::vector< std::function<void(int sockfd, char* message, int len)> > _callbacks;
+
     public:
         TCPSocket();
         bool connect(InetAddr &addr);
         bool send(char *data, int size);
         bool close();
+
+        void onReply(std::function<void(int sockfd, char* message, int len)> callback);
     };
 
     class TCPServer {

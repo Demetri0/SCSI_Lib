@@ -32,6 +32,7 @@ int recvall(int sockfd, char *buf, int len, int flags)
             break;
         }
         total += n;
+//        ::send(sockfd,"",0,0);
     }
 
     return (n == -1)? -1 : total;
@@ -96,11 +97,13 @@ bool Network::TCPServer::listen(InetAddr& addr)
         }
 
         char *buf = new char[1024];
-        int bytesReaded = ::recvall(sockfd, buf, 1024, _flags);
+        int bytesReaded = ::recv(sockfd, buf, 1024, _flags);
 
         InetAddr *user = new InetAddr(  (sockaddr_in*)usersockaddr  );
+        delete usersockaddr;
         dataRecieed(sockfd, user, buf, bytesReaded);
 
+//        ::close(sockfd);
         _userSockets.push_back( sockfd );
     }
 
@@ -149,10 +152,30 @@ bool Network::TCPSocket::connect(Network::InetAddr &addr)
 
 bool Network::TCPSocket::send(char *data, int size)
 {
-    return ::send( _sockfd, data, size, _flags ) > 0;
+    bool isSended = ::send( _sockfd, data, size, _flags ) > 0;
+
+    char* message = new char[1024];
+    int serverReplyLength = ::recv(_sockfd, message, 1024, _flags);
+    if( serverReplyLength < 0 ){
+        std::cerr << "Error reading server reply" << std::endl;
+    }
+    if( serverReplyLength > 0 ){
+        for(auto cb : _callbacks){
+            if( cb ){
+                cb(_sockfd, message, serverReplyLength);
+            }
+        }
+    }
+
+    return isSended;
 }
 
 bool Network::TCPSocket::close()
 {
     return ::close( _sockfd ) == 0;
+}
+
+void Network::TCPSocket::onReply(std::function<void (int, char *, int)> callback)
+{
+    _callbacks.push_back(callback);
 }
