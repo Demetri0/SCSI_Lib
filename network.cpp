@@ -2,18 +2,8 @@
 
 #include <iostream>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
-//#include <sys/types.h>
-//#include <linux/fs.h>
-//#include <sys/stat.h>
-
-#include <stdio.h>
-
-
 
 // ---
 int sendall(int sockfd, char *msg, int len, int flags)
