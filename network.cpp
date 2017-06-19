@@ -92,7 +92,6 @@ bool Network::TCPServer::listen(InetAddr& addr)
         sockaddr *usersockaddr = new sockaddr;
         unsigned int usersockaddrlen = 0;
         int sockfd = ::accept(_sockfd, usersockaddr, &usersockaddrlen);
-        std::cout << "Accept: " << sockfd << " Old: " << _sockfd << std::endl;
         if( ! sockfd ){
             std::cerr << "Cannot accept message errno(" << errno << ")" << std::endl;
             continue;
@@ -103,7 +102,10 @@ bool Network::TCPServer::listen(InetAddr& addr)
 
         InetAddr *user = new InetAddr(  (sockaddr_in*)usersockaddr  );
         delete usersockaddr;
-        dataRecieved(sockfd, user, buf, bytesReaded);
+        Request req(sockfd, *user, buf, bytesReaded);
+        delete buf;
+
+        dataRecieved(req);
 
         _userSockets.insert(sockfd);
     }
@@ -121,16 +123,16 @@ bool Network::TCPServer::close()
     return ::close( _sockfd ) == 0;
 }
 
-void Network::TCPServer::onDataRecieved(std::function<void (int, InetAddr *, char *, int)> callback)
+void Network::TCPServer::onDataRecieved(std::function<void(Request)> callback)
 {
     _callbacks.push_back( callback );
 }
 
-void Network::TCPServer::dataRecieved(int sockfd, InetAddr *addr, char *message, int len)
+void Network::TCPServer::dataRecieved(Request req)
 {
     for( auto cb : _callbacks ){
         if( cb ){
-            cb(sockfd, addr, message, len);
+            cb(req);
         }
     }
 }
@@ -160,10 +162,12 @@ bool Network::TCPSocket::send(char *data, int size)
     if( serverReplyLength < 0 ){
         std::cerr << "Error reading server reply" << std::endl;
     }
+    Response res(_sockfd, message, serverReplyLength);
+    delete message;
     if( serverReplyLength > 0 ){
         for(auto cb : _callbacks){
             if( cb ){
-                cb(_sockfd, message, serverReplyLength);
+                cb(res);
             }
         }
     }
@@ -171,12 +175,64 @@ bool Network::TCPSocket::send(char *data, int size)
     return isSended;
 }
 
+bool Network::TCPSocket::send(std::vector<char> data)
+{
+    return this->send( data.data(), data.size() );
+}
+
 bool Network::TCPSocket::close()
 {
     return ::close( _sockfd ) == 0;
 }
 
-void Network::TCPSocket::onReply(std::function<void (int, char *, int)> callback)
+void Network::TCPSocket::onReply(std::function<void(Response)> callback)
 {
     _callbacks.push_back(callback);
+}
+
+Network::TCPSocket::Response::Response(const int sockfd, char *message, int length)
+{
+    _sockfd  = sockfd;
+    for(int i = 0; i < length; ++i){
+        _message.push_back( message[i] );
+    }
+}
+
+Network::TCPSocket::Response::~Response()
+{
+    this->close();
+}
+
+std::vector<char> &Network::TCPSocket::Response::message()
+{
+    return _message;
+}
+
+bool Network::TCPSocket::Response::close()
+{
+    return ::close( _sockfd ) == 0;
+}
+
+Network::TCPServer::Request::Request(int sockfd, InetAddr &userAddress, char *message, int length)
+{
+    _sockfd = sockfd;
+    _userAddress = new InetAddr( userAddress.sockaddr_in() );
+    for(int i = 0; i < length; ++i){
+        _message.push_back( message[i] );
+    }
+}
+
+std::vector<char> &Network::TCPServer::Request::message()
+{
+    return _message;
+}
+
+void Network::TCPServer::Request::reply(std::vector<char> message)
+{
+    ::send(_sockfd, message.data(), message.size(), 0);
+}
+
+bool Network::TCPServer::Request::close()
+{
+    return ::close(_sockfd) == 0;
 }

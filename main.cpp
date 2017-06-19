@@ -78,12 +78,10 @@ int main(int argc, char* argv[])
     Network::InetAddr addr("127.0.0.1", 7878);
     if( isServer ){
         Network::TCPServer srv;
-        srv.onDataRecieved( [=](int sockfd, Network::InetAddr* useraddr, char* message, int len ){
-            std::cout << "Recieved: " << message << std::endl;
-            ::send(sockfd, "Data recieved success", 23, 0);
-            ::close(sockfd);
-            delete useraddr;
-            delete message;
+        srv.onDataRecieved( [=](Network::TCPServer::Request req){
+            std::cout << "Recieved: " << std::string(req.message().data()) << std::endl;
+            const char buf[] = "Date recieved successful";
+            req.reply( std::vector<char>( buf, buf+sizeof(buf) ) );
         });
         srv.listen( addr );
         srv.close();
@@ -93,11 +91,10 @@ int main(int argc, char* argv[])
             std::cout << "Error connected" << std::endl;
             return 1;
         }
-        sock.onReply([=](int sockfd, char *message, int len){
-            std::cout << "Server reply: " << message << std::endl;
-            delete message;
+        sock.onReply([=](Network::TCPSocket::Response res){
+            std::cout << "Server reply: " << std::string(res.message().data()) << std::endl;
         });
-        sock.send("Hello from Demetri0", 21);
+        sock.send("Hello Demetri0", 16);
         sock.close();
     }
 

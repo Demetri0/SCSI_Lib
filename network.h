@@ -43,29 +43,57 @@ namespace Network {
     };
 
     class TCPSocket {
+    public:
+        class Response {
+        private:
+            int _sockfd = 0;
+            std::vector<char> _message;
+
+        public:
+            Response(const int sockfd, char* message, int length);
+            ~Response();
+
+            std::vector<char> &message();
+            bool close();
+        };
+
     private:
         int _sockfd = 0;
         int _flags = 0;
 
-        std::vector< std::function<void(int sockfd, char* message, int len)> > _callbacks;
+        std::vector< std::function<void(Response)> > _callbacks;
 
     public:
         TCPSocket();
         bool connect(InetAddr &addr);
         bool send(char *data, int size);
+        bool send(std::vector<char> data);
         bool close();
 
-        void onReply(std::function<void(int sockfd, char* message, int len)> callback);
+        void onReply(std::function<void(Response)> callback);
     };
 
     class TCPServer {
+    public:
+        class Request {
+        private:
+            int _sockfd;
+            InetAddr* _userAddress;
+            std::vector<char> _message;
+
+        public:
+            Request(int sockfd, InetAddr &userAddress, char* message, int length);
+            std::vector<char> &message();
+            void reply(std::vector<char> message);
+            bool close();
+        };
     private:
         int _sockfd = 0;
         int _queueLength = 10;
         int _flags = 0;
         bool _isListening = false;
 
-        std::vector< std::function<void(int,InetAddr*,char*,int)> > _callbacks;
+        std::vector< std::function<void(Request req)> > _callbacks;
         std::set<int> _userSockets;
 
     public:
@@ -75,10 +103,10 @@ namespace Network {
         bool isListening() const;
         bool close();
 
-        void onDataRecieved(std::function<void(int,InetAddr*,char*,int)> callback);
+        void onDataRecieved(std::function<void(Request)> callback);
 
     private:
-        void dataRecieved(int sockfd, InetAddr* addr, char* message, int len);
+        void dataRecieved(Request req);
     };
 
 }
